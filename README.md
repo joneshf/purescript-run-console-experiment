@@ -201,5 +201,143 @@ main = do
   Test.Spec.Runner.run [specReporter] do
     it "logs are correct" do
       logs `shouldEqual` ("Hello sailor!" : "Goodbye sailor!" : Nil)
-
 ```
+
+## How can I do something advanced?
+
+Let's say that you don't like the idea of turning off all messages in production.
+Instead, you'd like to still show the `error` messages, but ignore `info`, `log`, and `warning`.
+You can do that by supplying a different interpreter to run.
+Let's write that interpreter!
+
+The first thing to know is that `Console a` is just a Plain Old PureScript Type.
+It has a case for each level of message it can handle: `Error`, `Info`, `Log`, and `Warn`.
+So we can do things like case on it and decide what to do in each case.
+In every case except the `Error` case, we want to ignore the supplied message.
+The general idea of what we want is a function like:
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Control.Monad.Eff.Console as Eff
+
+import Run.Console (Console(..))
+
+go :: forall a e. Console a -> Eff (console :: Eff.CONSOLE | e) a
+go = case _ of
+  Error str x -> x <$ Eff.error str
+  Info _ x -> pure x
+  Log _ x -> pure x
+  Warn _ x -> pure x
+```
+
+As it turns out, this function is a `NaturalTransformation` from `Console` to `Eff (console :: Eff.CONSOLE | e)`.
+You might see `NaturalTransformation` as an alias `(~>)` often.
+Notice that we don't touch whatever the `a` is in `Console`;
+we just pass it right along to `Eff (console :: Eff.CONSOLE | e)`.
+So we have something like `Canvas ~> Eff (console :: Eff.CONSOLE | e)`.
+We can rewrite the signature to reflect that fact.
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Control.Monad.Eff.Console as Eff
+
+import Run.Console (Console(..))
+
+go :: forall e. Console ~> Eff (console :: Eff.CONSOLE | e)
+go = case _ of
+  Error str x -> x <$ Eff.error str
+  Info _ x -> pure x
+  Log _ x -> pure x
+  Warn _ x -> pure x
+```
+
+Now that we have our function that does what we want, we can use it with `runEff` to build an interpreter!
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Control.Monad.Eff.Console as Eff
+
+import Run (BaseEff, Run)
+import Run.Console (CONSOLE, Console(..), runEff)
+
+go :: forall e. Console ~> Eff (console :: Eff.CONSOLE | e)
+go = case _ of
+  Error str x -> x <$ Eff.error str
+  Info _ x -> pure x
+  Log _ x -> pure x
+  Warn _ x -> pure x
+
+runProduction
+  :: forall a e r
+  . Run (console :: CONSOLE | r) a
+  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+runProduction = runEff go
+```
+
+In fact, we can even inline the function if we'd like:
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Control.Monad.Eff.Console as Eff
+
+import Run (BaseEff, Run)
+import Run.Console (CONSOLE, Console(..), runEff)
+
+runProduction
+  :: forall a e r
+  . Run (console :: CONSOLE | r) a
+  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+runProduction = runEff case _ of
+  Error str x -> x <$ Eff.error str
+  Info _ x -> pure x
+  Log _ x -> pure x
+  Warn _ x -> pure x
+```
+
+That's it!
+Now, we can run this interpreter just like any other.
+But it will only print the error messages.
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console as Eff
+
+import Run (BaseEff, Run, runBase)
+import Run.Console (CONSOLE, Console(..), error, log, runEff)
+
+runProduction
+  :: forall a e r
+  . Run (console :: CONSOLE | r) a
+  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+runProduction = runEff case _ of
+  Error str x -> x <$ Eff.error str
+  Info _ x -> pure x
+  Log _ x -> pure x
+  Warn _ x -> pure x
+
+main :: forall e. Eff (console :: Eff.CONSOLE | e) Unit
+main = runBase $ runProduction do
+  log "Hello sailor!"
+  -- do a bunch of stuff
+  error "Oh no sailor!"
+  log "Goodbye sailor!"
+```
+
+The only message we'll see is `"Oh no sailor!"`.
+All of the rest, we ignore.

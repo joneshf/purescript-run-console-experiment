@@ -2,6 +2,7 @@
 
 
 [![Latest release](http://img.shields.io/bower/v/purescript-run-console-experiment.svg)](https://github.com/joneshf/purescript-run-console-experiment/releases)
+[![Build Status](https://travis-ci.org/joneshf/purescript-run-console-experiment.svg?branch=master)](https://travis-ci.org/joneshf/purescript-run-console-experiment)
 
 ## Installation
 

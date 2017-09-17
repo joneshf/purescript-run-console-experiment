@@ -93,7 +93,7 @@ main = runBase $ runNoConsole do
 ```
 
 If you wanted to be more specific,
-you could change the line to `pure $ run $ runNoConsole` and fix remove the `Control.Monad.Eff.Console.CONSOLE` effect:
+you could change the line to `pure $ run $ runNoConsole` and remove the `Control.Monad.Eff.Console.CONSOLE` effect:
 
 ```PureScript
 module Main where

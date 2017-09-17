@@ -18,7 +18,10 @@ Module documentation is [published on Pursuit](http://pursuit.purescript.org/pac
 
 This is only an experiment because I don't know if I can maintain it well enough and I don't feel like squatting on the name `purescript-run-console`.
 It has feature parity with `purescript-console`.
-So, if that's your concern be at ease.
+If that's your concern, be at ease.
+
+If you want to maintain this, please do, but maintain it under `purescript-run-console`!
+Maybe this is could go in `purescript-contrib` or directly in `purescript`?
 
 ## How do I use this?
 

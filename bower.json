@@ -3,7 +3,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/joneshf/purescript-run-experiment.git"
+    "url": "git://github.com/joneshf/purescript-run-console-experiment.git"
   },
   "ignore": [
     "**/.*",

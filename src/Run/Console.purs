@@ -1,8 +1,5 @@
 module Run.Console
-  ( Console(..)
-  , CONSOLE
-  , _console
-  , error
+  ( error
   , errorShow
   , info
   , infoShow
@@ -10,15 +7,20 @@ module Run.Console
   , logShow
   , warn
   , warnShow
-  , runAccumulate
   , runConsole
   , runNoConsole
+  , runAccumulate
+  , runEff
   , runPure
+  , Console(..)
+  , CONSOLE
+  , _console
   )
   where
 
 import Control.Applicative (pure)
 import Control.Bind (bindFlipped)
+import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console as Eff
 import Control.Semigroupoid ((<<<))
 import Data.Either (either)
@@ -26,12 +28,15 @@ import Data.Functor (class Functor, (<$), (<$>))
 import Data.Functor.Variant (FProxy, on)
 import Data.List (reverse)
 import Data.List.Types (List(..))
+import Data.NaturalTransformation (type (~>))
 import Data.Show (class Show, show)
 import Data.Symbol (SProxy(..))
 import Data.Unit (Unit, unit)
-import Run (BaseEff, Run, interpret, liftEffect, peel, send)
+import Run (Run, BaseEff, interpret, liftEffect, peel, send)
 
 -- | The possible messages we can have on the console
+-- |
+-- | You'll only need to interact with this if you are writing an interpreter.
 data Console a
   = Error String a
   | Info String a
@@ -40,10 +45,13 @@ data Console a
 
 derive instance functorConsole :: Functor Console
 
+-- | A type synonym to clean up some signatures
 type CONSOLE
   = FProxy Console
 
 -- | A helper for the `console` label used in row types.
+-- |
+-- | You'll only need to interact with this if you are writing an interpreter.
 _console :: SProxy "console"
 _console = SProxy
 
@@ -94,15 +102,27 @@ runConsole
   :: forall a e r
   . Run (console :: CONSOLE | r) a
   -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
-runConsole = interpret _console case _ of
+runConsole = runEff case _ of
   Error str x -> x <$ Eff.error str
   Info str x -> x <$ Eff.info str
   Log str x -> x <$ Eff.log str
   Warn str x -> x <$ Eff.warn str
 
+-- | Runs the given function in an effectful context.
+-- | This converts the `CONSOLE` type into a
+-- | `Control.Monad.Eff.Console.CONSOLE` effect.
+-- |
+-- | Useful for building up new effectful interpreters.
+runEff
+  :: forall a e r
+  . Console ~> Eff (console :: Eff.CONSOLE | e)
+  -> Run (console :: CONSOLE | r) a
+  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+runEff = interpret _console
+
 -- | Runs without printing any messages to the console.
 -- |
--- | Useful when you want to eliminate the `CONSOLE` effect
+-- | Useful when you want to eliminate the `CONSOLE` type
 -- | without printing anything to the console.
 runNoConsole
   :: forall a r
@@ -114,9 +134,9 @@ runNoConsole = runPure case _ of
   Log _ w -> w
   Warn _ w -> w
 
--- | Runs the given function in a pure context eliminating the `CONSOLE` effect.
+-- | Runs the given function in a pure context eliminating the `CONSOLE` type.
 -- |
--- | Useful for building up new pure combinators.
+-- | Useful for building up new pure interpreters.
 runPure
   :: forall a r
   . (Console (Run (console :: CONSOLE | r) a) -> Run (console :: CONSOLE | r) a)

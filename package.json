@@ -1,0 +1,20 @@
+{
+  "name": "purescript-run-console-experiment",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "pulp build",
+    "pscid": "pscid",
+    "pulp": "pulp",
+    "test": "pulp test"
+  },
+  "author": "Hardy Jones <jones3.hardy@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "pscid": "^2.0.2",
+    "pulp": "^11.0.2",
+    "purescript": "^0.11.6",
+    "purescript-psa": "^0.5.1"
+  }
+}

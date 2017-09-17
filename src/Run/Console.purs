@@ -1,4 +1,21 @@
-module Run.Console where
+module Run.Console
+  ( Console(..)
+  , CONSOLE
+  , _console
+  , error
+  , errorShow
+  , info
+  , infoShow
+  , log
+  , logShow
+  , warn
+  , warnShow
+  , runAccumulate
+  , runConsole
+  , runNoConsole
+  , runPure
+  )
+  where
 
 import Control.Applicative (pure)
 import Control.Bind (bindFlipped)

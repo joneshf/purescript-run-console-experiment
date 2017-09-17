@@ -1,6 +1,10 @@
 {
   "name": "purescript-run-console-experiment",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/joneshf/purescript-run-experiment.git"
+  },
   "ignore": [
     "**/.*",
     "node_modules",

@@ -117,7 +117,7 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 
-import Run (runBase)
+import Run (run)
 import Run.Console (log, runConsole)
 
 main :: forall e. Eff e Unit

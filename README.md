@@ -62,7 +62,11 @@ main = runBase $ runConsole do
 
 You may be asking yourself, "Self, why would I use this?"
 There's probably a ton of reasons someone could give you for why you would.
-Here's one reason: sometimes you write logging code for development, that you don't want to show up in production.
+Here are a couple of reasons.
+
+### Turn off all logs in production
+
+Sometimes you write logging code for development, that you don't want to show up in production.
 If you use this library, the change is minimal.
 
 Say you have some code like this:
@@ -125,4 +129,77 @@ main = pure $ run $ runNoConsole do
   log "Hello sailor!"
   -- do a bunch of stuff
   log "Goodbye sailor!"
+```
+
+### Test logging code quickly
+
+Sometimes you want to ensure that what is being logged is correct.
+You can take the console messages you write, and run them with a different interpreter that accumulates all logs.
+
+Say you had some code like this:
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Run.Console (CONSOLE, log)
+
+sailorTime :: forall r. Run (console :: CONSOLE | r) Unit
+sailorTime = do
+  log "Hello sailor!"
+  log "Goodbye sailor!"
+```
+
+In order to test that the two messages are sent properly, we can run an accumulating interpreter:
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Data.List.Types (List)
+
+import Run.Console (CONSOLE, log, runAccumulate)
+
+sailorTime :: forall r. Run (console :: CONSOLE | r) Unit
+sailorTime = do
+  log "Hello sailor!"
+  log "Goodbye sailor!"
+
+logs :: List String
+logs = run $ runAccumulate sailorTime
+```
+
+This code does not reach out to the actual console and write anything; it's completely pure!
+All it does is evaluate `sailorTime` as though it were any other value in PureScript.
+`logs` contains both of those messages and you could write a test that verifies
+
+```PureScript
+module Main where
+
+import Prelude
+
+import Data.List.Types (List(..), (:))
+
+import Run.Console (CONSOLE, log, runAccumulate)
+
+import Test.Spec (it)
+import Test.Spec.Assertions (shouldEqual)
+import Test.Spec.Reporter.Spec (specReporter)
+import Test.Spec.Runner as Test.Spec.Runner
+
+sailorTime :: forall r. Run (console :: CONSOLE | r) Unit
+sailorTime = do
+  log "Hello sailor!"
+  log "Goodbye sailor!"
+
+logs :: List String
+logs = run $ runAccumulate sailorTime
+
+main = do
+  Test.Spec.Runner.run [specReporter] do
+    it "logs are correct" do
+      logs `shouldEqual` ("Hello sailor!" : "Goodbye sailor!" : Nil)
+
 ```

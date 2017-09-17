@@ -1,5 +1,6 @@
 {
   "name": "purescript-run-console-experiment",
+  "license": "MIT",
   "ignore": [
     "**/.*",
     "node_modules",

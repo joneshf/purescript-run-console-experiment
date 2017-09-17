@@ -1,5 +1,18 @@
 # purescript-run-console-experiment
 
+
+[![Latest release](http://img.shields.io/bower/v/purescript-run-console-experiment.svg)](https://github.com/joneshf/purescript-run-console-experiment/releases)
+
+## Installation
+
+```
+bower install purescript-run-console-experiment
+```
+
+## Documentation
+
+Module documentation is [published on Pursuit](http://pursuit.purescript.org/packages/purescript-run-console-experiment).
+
 ## Why `-experiment`?
 
 This is only an experiment because I don't know if I can maintain it well enough and I don't feel like squatting on the name `purescript-run-console`.

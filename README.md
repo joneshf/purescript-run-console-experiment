@@ -210,6 +210,7 @@ main = do
 
 Let's say that you don't like the idea of turning off all messages in production.
 Instead, you'd like to still show the `error` messages, but ignore `info`, `log`, and `warning`.
+Additionally, you want to prefix the `error` messages with a bright red label.
 You can do that by supplying a different interpreter to run.
 Let's write that interpreter!
 
@@ -224,17 +225,27 @@ module Main where
 
 import Prelude
 
+import Ansi.Codes (Color(..))
+import Ansi.Output (foreground, withGraphics)
+
 import Control.Monad.Eff.Console as Eff
 
 import Run.Console (Console(..))
 
 go :: forall a e. Console a -> Eff (console :: Eff.CONSOLE | e) a
 go = case _ of
-  Error str x -> x <$ Eff.error str
+  Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
   Warn _ x -> pure x
 ```
+
+We pull in `purescript-ansi` for the coloring and do the following for the `Error` case:
+
+* construct the `BrightRed` label
+* append the string we get to this label
+* log the string to the actual console
+* replace the `Unit` from `Eff (console :: Eff.CONSOLE | e) Unit` with `a`
 
 As it turns out, this function is a `NaturalTransformation` from `Console` to `Eff (console :: Eff.CONSOLE | e)`.
 You might see `NaturalTransformation` as an alias `(~>)` often.
@@ -248,13 +259,16 @@ module Main where
 
 import Prelude
 
+import Ansi.Codes (Color(..))
+import Ansi.Output (foreground, withGraphics)
+
 import Control.Monad.Eff.Console as Eff
 
 import Run.Console (Console(..))
 
 go :: forall e. Console ~> Eff (console :: Eff.CONSOLE | e)
 go = case _ of
-  Error str x -> x <$ Eff.error str
+  Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
   Warn _ x -> pure x
@@ -267,6 +281,9 @@ module Main where
 
 import Prelude
 
+import Ansi.Codes (Color(..))
+import Ansi.Output (foreground, withGraphics)
+
 import Control.Monad.Eff.Console as Eff
 
 import Run (BaseEff, Run)
@@ -274,7 +291,7 @@ import Run.Console (CONSOLE, Console(..), runEff)
 
 go :: forall e. Console ~> Eff (console :: Eff.CONSOLE | e)
 go = case _ of
-  Error str x -> x <$ Eff.error str
+  Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
   Warn _ x -> pure x
@@ -293,6 +310,9 @@ module Main where
 
 import Prelude
 
+import Ansi.Codes (Color(..))
+import Ansi.Output (foreground, withGraphics)
+
 import Control.Monad.Eff.Console as Eff
 
 import Run (BaseEff, Run)
@@ -303,7 +323,7 @@ runProduction
   . Run (console :: CONSOLE | r) a
   -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
 runProduction = runEff case _ of
-  Error str x -> x <$ Eff.error str
+  Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
   Warn _ x -> pure x
@@ -318,6 +338,9 @@ module Main where
 
 import Prelude
 
+import Ansi.Codes (Color(..))
+import Ansi.Output (foreground, withGraphics)
+
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console as Eff
 
@@ -329,7 +352,7 @@ runProduction
   . Run (console :: CONSOLE | r) a
   -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
 runProduction = runEff case _ of
-  Error str x -> x <$ Eff.error str
+  Error s x -> x <$ Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s)
   Info _ x -> pure x
   Log _ x -> pure x
   Warn _ x -> pure x
@@ -342,5 +365,8 @@ main = runBase $ runProduction do
   log "Goodbye sailor!"
 ```
 
-The only message we'll see is `"Oh no sailor!"`.
+The only message we'll see is `"[ERROR] Oh no sailor!"` where the `[ERROR]` is bright red.
 All of the rest, we ignore.
+
+This idea can be extended to most anything you need.
+You could format log messages in a different format, apply filtering on certain messages, add timestamps.

@@ -1,5 +1,5 @@
 {
-    "name": "purescript-run-console-experiment",
+    "name": "run-console-experiment",
     "set": "purerl-0.11.6-20170924142220",
     "source": "https://github.com/joneshf/purescript-package-sets.git",
     "depends": [

@@ -6,6 +6,8 @@
 /.psc*
 /.purs*
 /.psa*
+ebin
+erl_crash.dump
 
 # Created by https://www.gitignore.io/api/vim,osx,node,linux,macos,emacs,bower,purescript,sublimetext,visualstudiocode
 

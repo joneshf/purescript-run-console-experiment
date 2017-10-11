@@ -26,7 +26,7 @@ Maybe this is could go in `purescript-contrib` or directly in `purescript`?
 ## How do I use this?
 
 Much like `purescript-console`.
-You write your code using functions, and at the end you have to `run` it.
+You write your code using functions, and at the end you have to "run" it.
 
 If you had something like this:
 
@@ -53,11 +53,11 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 
-import Run (runBase)
+import Run (runBaseEff)
 import Run.Console (log, runConsole)
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
-main = runBase $ runConsole do
+main = runBaseEff $ runConsole do
   log "Hello sailor!"
 ```
 
@@ -82,11 +82,11 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 
-import Run (runBase)
+import Run (runBaseEff)
 import Run.Console (log, runConsole)
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
-main = runBase $ runConsole do
+main = runBaseEff $ runConsole do
   log "Hello sailor!"
   -- do a bunch of stuff
   log "Goodbye sailor!"
@@ -103,18 +103,18 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 
-import Run (runBase)
-import Run.Console (log, runConsole)
+import Run (runBaseEff)
+import Run.Console (log, runNoConsole)
 
 main :: forall e. Eff (console :: CONSOLE | e) Unit
-main = runBase $ runNoConsole do
+main = runBaseEff $ runNoConsole do
   log "Hello sailor!"
   -- do a bunch of stuff
   log "Goodbye sailor!"
 ```
 
 If you wanted to be more specific,
-you could change the line to `pure $ run $ runNoConsole` and remove the `Control.Monad.Eff.Console.CONSOLE` effect:
+you could change the line to `pure $ extract $ runNoConsole` and remove the `Control.Monad.Eff.Console.CONSOLE` effect:
 
 ```PureScript
 module Main where
@@ -124,11 +124,11 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 
-import Run (run)
-import Run.Console (log, runConsole)
+import Run (extract)
+import Run.Console (log, runNoConsole)
 
 main :: forall e. Eff e Unit
-main = pure $ run $ runNoConsole do
+main = pure $ extract $ runNoConsole do
   log "Hello sailor!"
   -- do a bunch of stuff
   log "Goodbye sailor!"
@@ -163,6 +163,7 @@ import Prelude
 
 import Data.List.Types (List)
 
+import Run (extract)
 import Run.Console (CONSOLE, log, runAccumulate)
 
 sailorTime :: forall r. Run (console :: CONSOLE | r) Unit
@@ -171,7 +172,7 @@ sailorTime = do
   log "Goodbye sailor!"
 
 logs :: List String
-logs = run $ runAccumulate sailorTime
+logs = extract $ runAccumulate sailorTime
 ```
 
 This code does not reach out to the actual console and write anything; it's completely pure!
@@ -185,6 +186,7 @@ import Prelude
 
 import Data.List.Types (List(..), (:))
 
+import Run (extract)
 import Run.Console (CONSOLE, log, runAccumulate)
 
 import Test.Spec (it)
@@ -198,7 +200,7 @@ sailorTime = do
   log "Goodbye sailor!"
 
 logs :: List String
-logs = run $ runAccumulate sailorTime
+logs = extract $ runAccumulate sailorTime
 
 main = do
   Test.Spec.Runner.run [specReporter] do
@@ -274,7 +276,8 @@ go = case _ of
   Warn _ x -> pure x
 ```
 
-Now that we have our function that does what we want, we can use it with `runEff` to build an interpreter!
+Now that we have our function that does what we want,
+we can use it with `runEff` to build an interpreter!
 
 ```PureScript
 module Main where
@@ -286,7 +289,7 @@ import Ansi.Output (foreground, withGraphics)
 
 import Control.Monad.Eff.Console as Eff
 
-import Run (BaseEff, Run)
+import Run (EFF, Run)
 import Run.Console (CONSOLE, Console(..), runEff)
 
 go :: forall e. Console ~> Eff (console :: Eff.CONSOLE | e)
@@ -294,14 +297,29 @@ go = case _ of
   Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
-  Warn _ x -> pure x
+  Warn _ x -> pure xit
 
 runProduction
   :: forall a e r
-  . Run (console :: CONSOLE | r) a
-  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+  . Run (console :: CONSOLE, eff :: EFF (console :: Eff.CONSOLE | e) | r) a
+  -> Run (eff :: EFF (console :: Eff.CONSOLE | e) | r) a
 runProduction = runEff go
 ```
+
+Aside: Notice that to write an interpreter that interprets into `EFF e`,
+we have to assume the given `Run r a` already has `EFF e` as part of its row `r`.
+
+This idea may seem confusing.
+But, consider what would happen if we did not specify the given `Run r a`
+had `EFF e` as part of its row `r`.
+We would be saying that by interpreting with `runProduction`,
+we would be "introducing" the `EFF e` into the row `r`.
+If we had a similar interpreter, it too would "introduce" `EFF e` into the row `r`.
+We would end up with duplicate labels!
+
+Rather than opening that can of worms,
+`purescript-run` forces us to say that
+the given `Run r a` already has `EFF e` as part of `r`.
 
 In fact, we can even inline the function if we'd like:
 
@@ -315,13 +333,13 @@ import Ansi.Output (foreground, withGraphics)
 
 import Control.Monad.Eff.Console as Eff
 
-import Run (BaseEff, Run)
+import Run (EFF, Run)
 import Run.Console (CONSOLE, Console(..), runEff)
 
 runProduction
   :: forall a e r
-  . Run (console :: CONSOLE | r) a
-  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+  . Run (console :: CONSOLE, eff :: EFF (console :: Eff.CONSOLE | e) | r) a
+  -> Run (eff :: EFF (console :: Eff.CONSOLE | e) | r) a
 runProduction = runEff case _ of
   Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
@@ -344,13 +362,13 @@ import Ansi.Output (foreground, withGraphics)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console as Eff
 
-import Run (BaseEff, Run, runBase)
+import Run (EFF, Run, runBaseEff)
 import Run.Console (CONSOLE, Console(..), error, log, runEff)
 
 runProduction
   :: forall a e r
-  . Run (console :: CONSOLE | r) a
-  -> Run (base :: BaseEff (console :: Eff.CONSOLE | e) | r) a
+  . Run (console :: CONSOLE, eff :: EFF (console :: Eff.CONSOLE | e) | r) a
+  -> Run (eff :: EFF (console :: Eff.CONSOLE | e) | r) a
 runProduction = runEff case _ of
   Error s x -> x <$ Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s)
   Info _ x -> pure x
@@ -358,7 +376,7 @@ runProduction = runEff case _ of
   Warn _ x -> pure x
 
 main :: forall e. Eff (console :: Eff.CONSOLE | e) Unit
-main = runBase $ runProduction do
+main = runBaseEff $ runProduction do
   log "Hello sailor!"
   -- do a bunch of stuff
   error "Oh no sailor!"

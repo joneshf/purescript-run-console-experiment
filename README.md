@@ -297,7 +297,7 @@ go = case _ of
   Error s x -> Eff.log (withGraphics (foreground BrightRed) "[ERROR] " <> s) $> x
   Info _ x -> pure x
   Log _ x -> pure x
-  Warn _ x -> pure xit
+  Warn _ x -> pure x
 
 runProduction
   :: forall a e r
